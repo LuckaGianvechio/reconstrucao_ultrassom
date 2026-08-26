@@ -1,0 +1,21 @@
+# Dados (grandes demais para o git)
+dataset_breast/
+
+# Referências / papers
+refs/
+
+# Repositório externo (clone do USF-MAE)
+USF-MAE/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Sistema
+.DS_Store
