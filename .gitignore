@@ -24,9 +24,6 @@ refs/
 *.tif
 *.tiff
 
-# Repositórios externos / clones dependentes
-USF-MAE/
-
 # Python / ambiente
 __pycache__/
 *.py[cod]

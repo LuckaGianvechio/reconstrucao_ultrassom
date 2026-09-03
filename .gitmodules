@@ -1,3 +1,6 @@
 [submodule "mae"]
 	path = mae
 	url = ./mae
+[submodule "USF-MAE"]
+	path = USF-MAE
+	url = ./USF-MAE
