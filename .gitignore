@@ -1,21 +1,49 @@
-# Dados (grandes demais para o git)
+# =========================
+# Projeto: reconstrução ultrassom
+# =========================
+
+# Dados e artefatos gerados (não versionar)
 dataset_breast/
-
-# Referências / papers
+data/raw/
+data/processed/
+artifacts/
+outputs/
+decoded/
+catboost_info/
 refs/
+*.joblib
+*.pt
+*.pkl
+*.npz
+*.h5
+*.csv
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.tif
+*.tiff
 
-# Repositório externo (clone do USF-MAE)
+# Repositórios externos / clones dependentes
 USF-MAE/
+mae/
 
-# Python
+# Python / ambiente
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 .env
+.env.*
+!.env.example
 
 # Jupyter
 .ipynb_checkpoints/
 
-# Sistema
+# Sistema / editor
 .DS_Store
+.vscode/
+
+# Logs / temporários
+*.log
+*.tmp
