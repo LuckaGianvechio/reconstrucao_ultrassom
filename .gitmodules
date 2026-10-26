@@ -1,6 +1,6 @@
 [submodule "mae"]
 	path = mae
-	url = ./mae
+	url = https://github.com/facebookresearch/mae
 [submodule "USF-MAE"]
 	path = USF-MAE
-	url = ./USF-MAE
+	url = https://github.com/Yusufii9/USF-MAE

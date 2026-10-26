@@ -1,0 +1,35 @@
+diff --git a/models_mae.py b/models_mae.py
+index 880e28f..4a13e22 100644
+--- a/models_mae.py
++++ b/models_mae.py
+@@ -37,7 +37,7 @@ class MaskedAutoencoderViT(nn.Module):
+         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim), requires_grad=False)  # fixed sin-cos embedding
+ 
+         self.blocks = nn.ModuleList([
+-            Block(embed_dim, num_heads, mlp_ratio, qkv_bias=True, qk_scale=None, norm_layer=norm_layer)
++            Block(embed_dim, num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer)
+             for i in range(depth)])
+         self.norm = norm_layer(embed_dim)
+         # --------------------------------------------------------------------------
+@@ -51,7 +51,7 @@ class MaskedAutoencoderViT(nn.Module):
+         self.decoder_pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, decoder_embed_dim), requires_grad=False)  # fixed sin-cos embedding
+ 
+         self.decoder_blocks = nn.ModuleList([
+-            Block(decoder_embed_dim, decoder_num_heads, mlp_ratio, qkv_bias=True, qk_scale=None, norm_layer=norm_layer)
++            Block(decoder_embed_dim, decoder_num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer)
+             for i in range(decoder_depth)])
+ 
+         self.decoder_norm = norm_layer(decoder_embed_dim)
+diff --git a/util/pos_embed.py b/util/pos_embed.py
+index 6acf8bd..5c8082b 100644
+--- a/util/pos_embed.py
++++ b/util/pos_embed.py
+@@ -53,7 +53,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
+     out: (M, D)
+     """
+     assert embed_dim % 2 == 0
+-    omega = np.arange(embed_dim // 2, dtype=np.float)
++    omega = np.arange(embed_dim // 2, dtype=float)
+     omega /= embed_dim / 2.
+     omega = 1. / 10000**omega  # (D/2,)
+ 

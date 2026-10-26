@@ -40,6 +40,13 @@ venv/
 .DS_Store
 .vscode/
 
+# Segredos
+priorlabs_token.txt
+
 # Logs / temporários
 *.log
 *.tmp
+
+# Material de terceiros e relatórios da disciplina (não versionar)
+docs/*.pdf
+relatorios/
