@@ -1,0 +1,689 @@
+<title>Informação Clínica nas Embeddings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a single reading column of numbered report sections, each chart on its own surface panel
+   with its controls in one row above it; sticky section index on top. */
+:root {
+  --bg: #f2f4f6;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #7d7c76;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --line: rgba(11, 11, 11, 0.10);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --baseline: #898781;
+  --dummy: #b0afa8;
+  --heat-lo: #dbe9fb;
+  --heat-hi: #0d366b;
+  --chip: #e6e9ee;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1012; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #8f8e88;
+    --grid: #2c2c2a; --axis: #45443f; --line: rgba(255, 255, 255, 0.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --baseline: #8f8e88; --dummy: #5f5e59;
+    --heat-lo: #172637; --heat-hi: #9ec5f4; --chip: #26282b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1012; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #8f8e88;
+  --grid: #2c2c2a; --axis: #45443f; --line: rgba(255, 255, 255, 0.10);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --baseline: #8f8e88; --dummy: #5f5e59;
+  --heat-lo: #172637; --heat-hi: #9ec5f4; --chip: #26282b; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 0 64px; }
+
+nav.index {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  border-bottom: 1px solid var(--line); margin-inline: -20px; padding-inline: 20px;
+}
+nav.index ol { list-style: none; display: flex; gap: 4px 18px; flex-wrap: wrap; margin: 0; padding: 10px 0; font-size: 13px; }
+nav.index a { color: var(--ink-2); text-decoration: none; white-space: nowrap; }
+nav.index a:hover, nav.index a:focus-visible { color: var(--ink); text-decoration: underline; }
+nav.index span { font-family: var(--font-data); color: var(--muted); margin-right: 4px; }
+
+header.top { padding-block: 40px 20px; display: grid; gap: 10px; }
+.eyebrow { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(30px, 5vw, 44px); line-height: 1.08; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 26px; line-height: 1.15; margin: 0; text-wrap: balance; }
+h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.lede { max-width: 68ch; color: var(--ink-2); margin: 0; }
+p { max-width: 70ch; margin: 0; }
+
+section { padding-block: 44px 0; display: grid; gap: 16px; scroll-margin-top: 56px; }
+.sec-head { display: grid; gap: 6px; }
+.sec-num { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.fact .v { font-family: var(--font-display); font-size: 30px; font-weight: 600; line-height: 1.1; }
+.fact .l { font-size: 13px; color: var(--ink-2); }
+
+ul.findings { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 76ch; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+.ctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ctl-label { font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+.seg { display: inline-flex; flex-wrap: wrap; background: var(--chip); border-radius: 6px; padding: 2px; gap: 2px; }
+.seg button {
+  font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--ink-2);
+  padding: 4px 10px; border-radius: 4px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+.seg button:disabled { opacity: 0.4; cursor: not-allowed; }
+.seg button:focus-visible, nav a:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.key { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.key.tick { width: 3px; height: 13px; border-radius: 1px; }
+.key.bar { border-radius: 2px; }
+.note { font-size: 13px; color: var(--muted); max-width: 80ch; }
+.stat-line { font-size: 13px; color: var(--ink-2); }
+.stat-line b { color: var(--ink); font-weight: 600; }
+
+.chart { width: 100%; min-width: 0; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--font-body); }
+.chart .num { font-family: var(--font-data); }
+.row-hit { fill: transparent; cursor: default; }
+.row-hit:hover { fill: var(--grid); fill-opacity: 0.45; }
+
+.tip {
+  position: fixed; z-index: 20; pointer-events: none; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12.5px; line-height: 1.45;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14); max-width: 320px;
+}
+.tip b { font-weight: 600; }
+.tip .num { font-family: var(--font-data); }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; color: var(--ink-2); background: var(--surface); position: sticky; top: 0; }
+td.num, th.num { font-family: var(--font-data); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+.pill { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 10px; background: var(--chip); color: var(--ink-2); white-space: nowrap; }
+.mini { display: inline-block; height: 8px; border-radius: 0 3px 3px 0; background: var(--s1); vertical-align: middle; margin-right: 6px; }
+.freq { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px 28px; }
+.freq h4 { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.fq-row { display: grid; grid-template-columns: 76px 1fr 64px; gap: 8px; align-items: center; font-size: 13px; padding-block: 3px; }
+.fq-row .lvl { font-family: var(--font-data); font-size: 12px; color: var(--ink-2); }
+.fq-track { position: relative; height: 12px; }
+.fq-bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--s1); border-radius: 0 3px 3px 0; }
+.fq-row .n { font-family: var(--font-data); font-size: 12px; color: var(--ink-2); }
+.enr { font-family: var(--font-data); font-size: 11.5px; text-align: right; color: var(--ink-2); }
+.enr.up { color: var(--ink); font-weight: 500; }
+.dict td:nth-child(2) { min-width: 220px; }
+.dict td:nth-child(6), .dict td:nth-child(7) { min-width: 260px; font-size: 12px; color: var(--ink-2); }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+details summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+details[open] summary { margin-bottom: 10px; }
+code { font-family: var(--font-data); font-size: 0.9em; }
+
+@media (max-width: 560px) {
+  body { font-size: 14px; }
+  .wrap { padding-inline: 16px; }
+  nav.index { margin-inline: -16px; padding-inline: 16px; }
+  .panel { padding: 12px; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+  <nav class="index" aria-label="Seções">
+    <ol>
+      <li><a href="#resumo"><span>0</span>Resumo</a></li>
+      <li><a href="#variaveis"><span>1</span>Variáveis</a></li>
+      <li><a href="#metodo"><span>2</span>Embeddings e métodos</a></li>
+      <li><a href="#estrategias"><span>3</span>Estratégias</a></li>
+      <li><a href="#maevae"><span>4</span>MAE vs. VAE</a></li>
+      <li><a href="#porvariavel"><span>5</span>Por variável</a></li>
+      <li><a href="#confusao"><span>6</span>Fator de aquisição</a></li>
+      <li><a href="#limites"><span>7</span>Limitações</a></li>
+    </ol>
+  </nav>
+
+  <header class="top">
+    <div class="eyebrow">BrEaST · ultrassom mamário · embedding → variáveis clínicas</div>
+    <h1>Informação clínica nas embeddings de ultrassom</h1>
+    <p class="lede">Quanta informação sobre as variáveis que o especialista anota olhando a imagem as embeddings de
+      dois modelos (USF-MAE e SD-VAE) carregam, medida pelo ROC-AUC de classificadores em validação cruzada e
+      comparada com um baseline que só vê o aparelho de aquisição.</p>
+  </header>
+
+  <section id="resumo">
+    <div class="sec-head"><div class="sec-num">0</div><h2>Resumo</h2></div>
+    <div class="facts" id="facts"></div>
+    <ul class="findings" id="findings"></ul>
+  </section>
+
+  <section id="variaveis">
+    <div class="sec-head"><div class="sec-num">1</div><h2>Dicionário das variáveis</h2>
+      <p class="lede">Colunas de rótulo único viram um modelo multiclasse (ou binário, se sobram duas classes; classes
+        com menos de 5 casos saem). Colunas multirrótulo, com valores separados por <code>&amp;</code>, viram um
+        classificador binário por rótulo, mantendo rótulos com 5–95% de positivos.</p></div>
+    <details>
+      <summary>Colunas clínicas e como cada uma foi modelada</summary>
+      <div class="table-wrap"><table class="dict" id="dict"></table></div>
+    </details>
+    <div class="panel">
+      <div class="controls"><div class="ctl"><span class="ctl-label">Grupo</span><div class="seg" id="tg-group"></div></div></div>
+      <div class="table-wrap"><table id="targets"></table></div>
+      <p class="note">Barra = prevalência da classe positiva nos alvos binários. Vários diagnósticos têm só 13–30
+        positivos, o que deixa suas métricas instáveis.</p>
+    </div>
+  </section>
+
+  <section id="metodo">
+    <div class="sec-head"><div class="sec-num">2</div><h2>Embeddings, reduções e modelos</h2></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Embedding</th><th>Modelo</th><th>Entrada</th><th>Saída</th><th>Pooling</th><th class="num">Dim.</th></tr></thead>
+      <tbody>
+        <tr><td><code>mae_cls</code></td><td>USF-MAE (ViT-B/16 MAE pré-treinado em ultrassom)</td><td>224×224</td><td>197 tokens × 768</td><td>token CLS</td><td class="num">768</td></tr>
+        <tr><td><code>mae_mean</code></td><td>USF-MAE</td><td>224×224</td><td>197 tokens × 768</td><td>média dos 196 patches</td><td class="num">768</td></tr>
+        <tr><td><code>vae_flat</code></td><td>SD-VAE (<code>stabilityai/sd-vae-ft-mse</code>)</td><td>256×256</td><td>latente 4×32×32</td><td>latente achatado</td><td class="num">4096</td></tr>
+        <tr><td><code>vae_mean</code></td><td>SD-VAE</td><td>256×256</td><td>latente 4×32×32</td><td>média espacial por canal</td><td class="num">4</td></tr>
+      </tbody></table></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Etapa</th><th>O que foi testado</th></tr></thead>
+      <tbody>
+        <tr><td>Redução</td><td>sem redução (<code>raw</code>); PCA e UMAP com k = 10, 30, 50, ajustados só no fold de treino; UMAP com StandardScaler e 3 seeds por fold</td></tr>
+        <tr><td>Modelos</td><td>CatBoost, XGBoost, LightGBM (150 árvores, profundidade 4, lr 0.08, classes balanceadas) e MLP (1 camada de 64); baseline Dummy (classe majoritária)</td></tr>
+        <tr><td>Validação</td><td>CV estratificada de 5 folds, mesmas partições para toda a grade; CV agrupada por lote de aquisição (tamanho da imagem ou Pixel_size) só para a melhor estratégia</td></tr>
+        <tr><td>Baseline de aquisição</td><td>CatBoost só com largura, altura e Pixel_size da imagem original, mesmos folds</td></tr>
+        <tr><td>Margem de erro</td><td>desvio-padrão da embedding entre os 5 folds; aquisição tratada como erro 0 (heurística: "acima da margem")</td></tr>
+        <tr><td>Teste de hipótese</td><td>só para a estratégia global: média das diferenças por fold (embedding − aquisição), erro-padrão corrigido para CV (Nadeau–Bengio), t de Student com k − 1 g.l., q-valores de Benjamini–Hochberg; "significativo" = q &lt; 0.05</td></tr>
+      </tbody></table></div>
+    <p class="note">Os dois modelos redimensionam a imagem sem preservar a proporção. O formato original, que
+      identifica o aparelho, fica impresso na embedding (seção 6).</p>
+  </section>
+
+  <section id="estrategias">
+    <div class="sec-head"><div class="sec-num">3</div><h2>Embedding × redução × modelo</h2>
+      <p class="lede">CV estratificada, média do ROC-AUC sobre os alvos do grupo. No heatmap e nas linhas, média dos
+        quatro modelos.</p></div>
+    <div class="panel">
+      <div class="controls"><div class="ctl"><span class="ctl-label">Grupo</span><div class="seg" id="st-group"></div></div></div>
+      <h3>ROC-AUC médio por embedding e redução</h3>
+      <div class="chart" id="heat"></div>
+    </div>
+    <div class="panel">
+      <h3>PCA vs. UMAP com o mesmo número de componentes</h3>
+      <div class="legend"><span><i class="key" style="background:var(--s1)"></i>PCA</span><span><i class="key" style="background:var(--s2)"></i>UMAP</span><span><i class="key bar" style="background:var(--baseline);height:3px;width:16px;border-radius:1px"></i>sem redução</span></div>
+      <div class="chart" id="pcaumap"></div>
+    </div>
+    <div class="panel">
+      <h3>Modelos de inferência na embedding bruta</h3>
+      <div class="chart" id="models"></div>
+      <p class="note">Ponto = ROC-AUC médio; barra = erro-padrão entre alvos. p do teste de Friedman entre os quatro modelos.</p>
+    </div>
+  </section>
+
+  <section id="maevae">
+    <div class="sec-head"><div class="sec-num">4</div><h2>USF-MAE vs. SD-VAE por variável</h2>
+      <p class="lede">CatBoost, CV estratificada, cada embedding na sua melhor redução: <code>mae_cls</code> sem redução e
+        <code>vae_flat</code> com PCA 10.</p></div>
+    <div class="panel">
+      <div class="controls"><div class="ctl"><span class="ctl-label">Grupo</span><div class="seg" id="mv-group"></div></div></div>
+      <div class="legend"><span><i class="key" style="background:var(--s1)"></i>USF-MAE (mae_cls)</span><span><i class="key" style="background:var(--s2)"></i>SD-VAE (vae_flat + PCA 10)</span></div>
+      <div class="chart" id="maevae-chart"></div>
+    </div>
+  </section>
+
+  <section id="porvariavel">
+    <div class="sec-head"><div class="sec-num">5</div><h2>Cada variável contra o baseline de aquisição</h2>
+      <p class="lede">A melhor estratégia global (<code>mae_cls</code> · sem redução · CatBoost) foi escolhida pela média das
+        variáveis de imagem. A melhor por variável é o máximo de 88 combinações e superestima o desempenho, sobretudo
+        onde há poucos positivos.</p></div>
+    <div class="panel">
+      <div class="controls">
+        <div class="ctl"><span class="ctl-label">Estratégia</span><div class="seg" id="pv-strategy"></div></div>
+        <div class="ctl"><span class="ctl-label">CV</span><div class="seg" id="pv-cv"></div></div>
+        <div class="ctl"><span class="ctl-label">Métrica</span><div class="seg" id="pv-metric"></div></div>
+        <div class="ctl"><span class="ctl-label">Grupo</span><div class="seg" id="pv-group"></div></div>
+        <div class="ctl"><span class="ctl-label">Ordem</span><div class="seg" id="pv-sort"></div></div>
+      </div>
+      <div class="legend" id="pv-legend"></div>
+      <div class="stat-line" id="pv-stat"></div>
+      <div class="chart" id="pv-chart"></div>
+      <p class="note" id="pv-note"></p>
+    </div>
+    <div class="panel">
+      <h3>Quais estratégias aparecem mais entre as melhores por variável</h3>
+      <p class="note" id="fq-intro"></p>
+      <div class="freq" id="freq"></div>
+      <p class="stat-line" id="fq-global"></p>
+    </div>
+  </section>
+
+  <section id="confusao">
+    <div class="sec-head"><div class="sec-num">6</div><h2>Fator de confusão de aquisição</h2>
+      <p class="lede">Na CV agrupada nenhum lote de aquisição aparece em treino e teste ao mesmo tempo. Juntar a aquisição
+        à embedding não acrescenta nada, porque a embedding já contém essa informação; separar os lotes derruba mais a
+        aquisição do que a embedding.</p></div>
+    <div class="panel">
+      <div class="legend"><span><i class="key bar" style="background:var(--baseline)"></i>Só aquisição</span><span><i class="key bar" style="background:var(--s1)"></i>Só embedding</span><span><i class="key bar" style="background:var(--s3)"></i>Embedding + aquisição</span></div>
+      <div class="chart" id="conf"></div>
+      <p class="note">ROC-AUC médio por grupo, mae_cls · sem redução · CatBoost. O eixo começa em 0.5, o acaso.</p>
+    </div>
+    <div class="panel">
+      <h3>Alvos de histórico: as anotações de imagem já os explicam?</h3>
+      <div class="legend"><span><i class="key" style="background:var(--s3)"></i>Só anotações de imagem do especialista</span><span><i class="key" style="background:var(--s1)"></i>Embedding, CV estratificada</span><span><i class="key" style="background:var(--s2)"></i>Embedding, CV agrupada por Pixel_size</span></div>
+      <div class="chart" id="hist"></div>
+      <p class="note">Sinais clínicos (palpável, sem sinais) são previstos pelas anotações de imagem tanto quanto pela
+        embedding: lesão palpável é maior e mais suspeita, algo visível. Não servem de controle negativo. Histórico
+        familiar é o único com excesso que as anotações não explicam.</p>
+    </div>
+  </section>
+
+  <section id="limites">
+    <div class="sec-head"><div class="sec-num">7</div><h2>Limitações e próximos passos</h2></div>
+    <ul class="findings">
+      <li>256 casos e 5 folds: desvios de 0.04–0.26 de ROC-AUC por variável; diagnósticos raros têm recall 0 no limiar padrão.</li>
+      <li>A grade completa (embedding, redução, modelo) só foi rodada com CV estratificada; a CV agrupada existe apenas para a melhor estratégia.</li>
+      <li><code>Calcifications</code>: no sweep a classe positiva ficou invertida; seu PR-AUC na melhor-por-variável fica de fora. ROC-AUC não é afetado.</li>
+      <li><code>Classification</code> (benigno / maligno) nunca foi usada como alvo e é o próximo alvo natural.</li>
+      <li>Próximo experimento: embedding só da lesão, recortada pela máscara, com CV agrupada por Pixel_size.</li>
+    </ul>
+    <p class="note">Gerado por <code>python -m src.evaluation.build_report</code> a partir dos CSVs em
+      <code>outputs/embedding_to_tabular_experiments/</code>; a versão Markdown com figuras PNG está em <code>report/report.md</code>.</p>
+  </section>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const DATA = __REPORT_DATA__;
+const GROUPS = ['image', 'pathology', 'history', 'sentinel'];
+const GROUP_PT = { image: 'Imagem', pathology: 'Patologia', history: 'Histórico', sentinel: 'Sentinela' };
+const SETTINGS = ['raw', 'pca10', 'pca30', 'pca50', 'umap10', 'umap30', 'umap50'];
+const NS = 'http://www.w3.org/2000/svg';
+const state = { tg: 'image', st: 'image', mv: 'image', pv: { strategy: 'global', cv: 'stratified', metric: 'roc', group: 'image', sort: 'gain' } };
+
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const f3 = v => (v === null || v === undefined || Number.isNaN(v)) ? '—' : v.toFixed(3);
+const signed = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(3);
+function short(n) {
+  return n.replace('of no special type (NST)', 'NST').replace('Ductal carcinoma in situ (DCIS)', 'DCIS')
+    .replace('/hormonal contraception', '').replace(' of breast/ovarian cancer', '')
+    .replace('Complex cyst / Non-simple cyst', 'Complex cyst').replace('heterogeneous: predominantly', 'het. pred.')
+    .replace('homogeneous:', 'homog.').replace('Interpretation_', 'Interp: ').replace('Diagnosis_', 'Diag: ')
+    .replace('Margin_', 'Margin: ').replace('Tissue_', 'Tissue: ').replace('Signs_', 'Signs: ').replace('Symptoms_', 'Symptoms: ');
+}
+function s(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function text(parent, x, y, str, attrs = {}) {
+  const t = s('text', { x, y, fill: css('--ink-2'), ...attrs }, parent);
+  t.textContent = str;
+  return t;
+}
+function linear(d0, d1, r0, r1) { return v => r0 + (v - d0) / (d1 - d0) * (r1 - r0); }
+function ticks(a, b, step) { const out = []; for (let v = Math.ceil(a / step - 1e-9) * step; v <= b + 1e-9; v += step) out.push(+v.toFixed(3)); return out; }
+
+const tip = document.getElementById('tip');
+function showTip(evt, html) {
+  tip.innerHTML = html; tip.hidden = false;
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  if (x + w > window.innerWidth - 8) x = evt.clientX - w - pad;
+  if (y + h > window.innerHeight - 8) y = evt.clientY - h - pad;
+  tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px';
+}
+function hideTip() { tip.hidden = true; }
+function bindTip(node, html) {
+  node.addEventListener('mousemove', e => showTip(e, html));
+  node.addEventListener('mouseleave', hideTip);
+  node.addEventListener('touchstart', e => showTip(e.touches[0], html), { passive: true });
+}
+
+function seg(id, options, get, set) {
+  const box = document.getElementById(id);
+  box.innerHTML = '';
+  for (const [value, label, disabled] of options) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = label; b.id = `${id}-${value}`;
+    b.setAttribute('aria-pressed', String(get() === value));
+    if (disabled) b.disabled = true;
+    b.addEventListener('click', () => { set(value); renderAll(); });
+    box.appendChild(b);
+  }
+}
+const groupOptions = GROUPS.map(g => [g, GROUP_PT[g]]);
+
+function axisX(svg, x, x0, x1, y, step, fmt = v => v.toFixed(1), label) {
+  for (const v of ticks(x0, x1, step)) {
+    s('line', { x1: x(v), x2: x(v), y1: 0, y2: y, stroke: css('--grid'), 'stroke-width': 1 }, svg);
+    text(svg, x(v), y + 16, fmt(v), { 'text-anchor': 'middle', 'font-size': 11, class: 'num' });
+  }
+  s('line', { x1: x(x0), x2: x(x1), y1: y, y2: y, stroke: css('--axis'), 'stroke-width': 1 }, svg);
+  if (label) text(svg, (x(x0) + x(x1)) / 2, y + 34, label, { 'text-anchor': 'middle', 'font-size': 12 });
+}
+
+/* Dot rows: rows = [{label, full, markers: [{v, err, color, name, shape}], right, bold, tipExtra}] */
+function dotRows(el, rows, { domain, step = 0.1, ref = 0.5, axisLabel, rightW = 0, dodge = false }) {
+  el.innerHTML = '';
+  const W = el.clientWidth || 700, narrow = W < 600;
+  const labelW = narrow ? 128 : 250, rw = rightW ? (narrow ? 46 : rightW) : 12;
+  const rowH = dodge ? 34 : 26, top = 6, plotH = rows.length * rowH, H = top + plotH + 44;
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' }, el);
+  const x = linear(domain[0], domain[1], labelW, W - rw);
+  const g = s('g', { transform: `translate(0,${top})` }, svg);
+  axisX(g, x, domain[0], domain[1], plotH, step, v => v.toFixed(1), axisLabel);
+  if (ref !== null && ref >= domain[0]) s('line', { x1: x(ref), x2: x(ref), y1: 0, y2: plotH, stroke: css('--axis'), 'stroke-width': 1.5 }, g);
+  rows.forEach((r, i) => {
+    const cy = i * rowH + rowH / 2;
+    const hit = s('rect', { x: 0, y: i * rowH, width: W, height: rowH, class: 'row-hit' }, g);
+    const lab = narrow && r.label.length > 20 ? r.label.slice(0, 19) + '…' : r.label;
+    text(g, labelW - 10, cy + 4, lab, { 'text-anchor': 'end', 'font-size': 12, 'font-weight': r.bold ? 600 : 400, fill: r.bold ? css('--ink') : css('--ink-2') });
+    const vals = r.markers.map(m => m.v).filter(v => v !== null && v !== undefined);
+    if (!dodge && vals.length > 1) {
+      s('line', { x1: x(Math.min(...vals)), x2: x(Math.max(...vals)), y1: cy, y2: cy, stroke: css('--grid'), 'stroke-width': 4, 'stroke-linecap': 'round' }, g);
+    }
+    const offs = dodge ? r.markers.map((_, k) => (k - (r.markers.length - 1) / 2) * 9) : r.markers.map(() => 0);
+    r.markers.forEach((m, k) => {
+      if (m.v === null || m.v === undefined) return;
+      const yy = cy + offs[k];
+      const clamp = v => Math.max(domain[0], Math.min(domain[1], v));
+      if (m.err) s('line', { x1: x(clamp(m.v - m.err)), x2: x(clamp(m.v + m.err)), y1: yy, y2: yy, stroke: m.color, 'stroke-width': 1.5, 'stroke-opacity': dodge ? 1 : 0.55 }, g);
+      if (m.shape === 'tick') s('line', { x1: x(m.v), x2: x(m.v), y1: yy - 7, y2: yy + 7, stroke: m.color, 'stroke-width': 3, 'stroke-linecap': 'round' }, g);
+      else s('circle', { cx: x(clamp(m.v)), cy: yy, r: 5, fill: m.color, stroke: css('--surface'), 'stroke-width': 2 }, g);
+    });
+    if (r.right) text(g, W - rw + 8, cy + 4, narrow ? r.rightShort ?? r.right : r.right, { 'font-size': 11, class: 'num' });
+    const lines = r.markers.filter(m => m.v !== null && m.v !== undefined)
+      .map(m => `<span style="color:${m.color}">●</span> ${m.name}: <span class="num">${f3(m.v)}${m.err ? ' ± ' + f3(m.err) : ''}</span>`);
+    bindTip(hit, `<b>${r.full ?? r.label}</b><br>${lines.join('<br>')}${r.tipExtra ? '<br>' + r.tipExtra : ''}`);
+  });
+}
+
+function sigList(pre) {
+  const r = DATA.global.filter(x => x.grupo === 'image' && x[pre + 'significativo'] && x[pre + 'ganho'] > 0);
+  return r.length ? `só ${r.map(x => `<code>${short(x.target)}</code>`).join(', ')} ${r.length === 1 ? 'é significativa' : 'são significativas'}` : 'nenhuma variável é significativa';
+}
+
+function renderFacts() {
+  const S = DATA.summary;
+  const facts = [
+    [f3(S.mae), `ROC-AUC médio do USF-MAE nas ${S.n_image_targets} variáveis de imagem (SD-VAE: ${f3(S.vae)})`],
+    [f3(S.best_grouped), `melhor estratégia global com os lotes de aquisição separados (${f3(S.best_strat)} na CV estratificada)`],
+    [f3(S.acq_strat), 'baseline só com largura, altura e Pixel_size da imagem'],
+    [`${S.n_robust} de ${S.n_image_targets}`, 'variáveis de imagem com ganho sobre a aquisição acima da margem (1 dp), com os lotes separados'],
+  ];
+  document.getElementById('facts').innerHTML = facts.map(([v, l]) => `<div class="fact"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+  const robust = DATA.global.filter(r => r.grupo === 'image' && r.agrup_ganho_supera_margem && r.agrup_ganho > 0).map(r => `<code>${short(r.target)}</code>`);
+  const m = DATA.models.filter(r => r.grupo === 'image' && r.embedding === 'mae_cls');
+  const mv = Object.fromEntries(m.map(r => [r.modelo, r.roc_auc_medio]));
+  const findings = [
+    `<b>O USF-MAE carrega muito mais informação clínica que o SD-VAE</b>: ${f3(S.mae)} vs. ${f3(S.vae)}; <code>mae_cls</code> ≈ <code>mae_mean</code>.`,
+    '<b>Reduzir a dimensionalidade piora o MAE</b>; nas variáveis de imagem, com o mesmo k, PCA supera UMAP nas 9 comparações.',
+    `<b>Os três gradient boostings empatam</b> (CatBoost ${f3(mv.CatBoost)}, XGBoost ${f3(mv.XGBoost)}, LightGBM ${f3(mv.LightGBM)}); o MLP fica atrás (${f3(mv.MLP)}).`,
+    `<b>Parte do desempenho é reconhecimento do aparelho</b>: separar os lotes custa ${f3(S.best_strat - S.best_grouped)} de ROC-AUC à embedding.`,
+    `<b>Ganho acima da margem sobre a aquisição</b> com os lotes separados: ${robust.join(', ')}.`,
+    `<b>No teste de hipótese formal o quadro é mais modesto</b>: com correção para múltiplos testes, ${sigList('')} na CV estratificada e ${sigList('agrup_')} na CV agrupada. Com 5 folds o teste tem pouco poder.`,
+  ];
+  document.getElementById('findings').innerHTML = findings.map(t => `<li>${t}</li>`).join('');
+}
+
+function renderDict() {
+  const cols = Object.keys(DATA.dictionary[0]);
+  document.getElementById('dict').innerHTML = `<thead><tr>${cols.map(c => `<th${c === 'n válido' ? ' class="num"' : ''}>${c}</th>`).join('')}</tr></thead><tbody>` +
+    DATA.dictionary.map(r => `<tr>${cols.map(c => `<td${c === 'n válido' ? ' class="num"' : ''}>${c === 'Variável' ? `<code>${r[c]}</code>` : String(r[c]).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>')}</td>`).join('')}</tr>`).join('') + '</tbody>';
+}
+
+function renderTargets() {
+  seg('tg-group', groupOptions, () => state.tg, v => state.tg = v);
+  const rows = DATA.targets.filter(r => r.Grupo === state.tg);
+  document.getElementById('targets').innerHTML = '<thead><tr><th>Alvo</th><th>Tipo</th><th class="num">n</th><th>Distribuição</th></tr></thead><tbody>' +
+    rows.map(r => {
+      const m = /([\d.]+)% positivos/.exec(r['Distribuição']);
+      const bar = m ? `<span class="mini" style="width:${(+m[1] * 1.2).toFixed(1)}px"></span>` : '';
+      return `<tr><td>${r.Alvo}</td><td><span class="pill">${r.Tipo}</span></td><td class="num">${r.n}</td><td>${bar}${r['Distribuição']}</td></tr>`;
+    }).join('') + '</tbody>';
+}
+
+function mixColor(a, b, t) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const [ra, ga, ba] = p(a), [rb, gb, bb] = p(b);
+  return `rgb(${Math.round(ra + (rb - ra) * t)},${Math.round(ga + (gb - ga) * t)},${Math.round(ba + (bb - ba) * t)})`;
+}
+function luminance(rgb) { const [r, g, b] = rgb.match(/\d+/g).map(Number); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }
+
+function renderHeat() {
+  seg('st-group', groupOptions, () => state.st, v => state.st = v);
+  const el = document.getElementById('heat'); el.innerHTML = '';
+  const rows = DATA.heat.filter(r => r.group === state.st);
+  const order = ['mae_cls', 'mae_mean', 'vae_flat', 'vae_mean'];
+  const W = el.clientWidth || 700, narrow = W < 600, labelW = narrow ? 70 : 90, cellH = 38, top = 4;
+  const cellW = (W - labelW) / SETTINGS.length, H = top + order.length * cellH + 30;
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}` }, el);
+  const lo = css('--heat-lo'), hi = css('--heat-hi');
+  order.forEach((emb, i) => {
+    const r = rows.find(x => x.embedding === emb);
+    text(svg, labelW - 8, top + i * cellH + cellH / 2 + 4, emb, { 'text-anchor': 'end', 'font-size': 12, class: 'num' });
+    SETTINGS.forEach((st, j) => {
+      const v = r ? r[st] : null, x0 = labelW + j * cellW, y0 = top + i * cellH;
+      if (v === null || v === undefined) {
+        text(svg, x0 + cellW / 2, y0 + cellH / 2 + 4, 'n/a', { 'text-anchor': 'middle', 'font-size': 11, fill: css('--muted') });
+        return;
+      }
+      const t = Math.max(0, Math.min(1, (v - 0.5) / 0.35)), fill = mixColor(lo, hi, t);
+      const rect = s('rect', { x: x0 + 1, y: y0 + 1, width: cellW - 2, height: cellH - 2, rx: 3, fill }, svg);
+      text(svg, x0 + cellW / 2, y0 + cellH / 2 + 4, narrow ? v.toFixed(2) : v.toFixed(3), { 'text-anchor': 'middle', 'font-size': narrow ? 10.5 : 12, class: 'num', fill: luminance(fill) < 0.5 ? '#ffffff' : '#0b0b0b', 'pointer-events': 'none' });
+      bindTip(rect, `<b>${emb} · ${st}</b><br>${GROUP_PT[state.st]}: ROC-AUC médio <span class="num">${f3(v)}</span><br>média dos 4 modelos, CV estratificada`);
+    });
+  });
+  SETTINGS.forEach((st, j) => text(svg, labelW + j * cellW + cellW / 2, top + order.length * cellH + 18, st, { 'text-anchor': 'middle', 'font-size': narrow ? 10 : 12, class: 'num' }));
+}
+
+function smallMultiples(el, panels, draw, { height = 190 } = {}) {
+  el.innerHTML = '';
+  const W = el.clientWidth || 700, cols = W < 600 ? 1 : panels.length, gap = 18;
+  const pw = (W - gap * (cols - 1)) / cols, rows = Math.ceil(panels.length / cols), H = rows * (height + 34);
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}` }, el);
+  panels.forEach((p, i) => {
+    const gx = (i % cols) * (pw + gap), gy = Math.floor(i / cols) * (height + 34);
+    const g = s('g', { transform: `translate(${gx},${gy})` }, svg);
+    text(g, 0, 14, p.title, { 'font-size': 13, 'font-weight': 600, fill: css('--ink') });
+    draw(s('g', { transform: 'translate(0,24)' }, g), p, pw, height - 24);
+  });
+}
+
+function renderPcaUmap() {
+  const rows = DATA.heat.filter(r => r.group === state.st);
+  const embs = ['mae_cls', 'mae_mean', 'vae_flat'].map(e => rows.find(r => r.embedding === e));
+  const vals = embs.flatMap(r => SETTINGS.map(st => r[st]));
+  const y0 = Math.floor((Math.min(...vals) - 0.01) * 50) / 50, y1 = Math.ceil((Math.max(...vals) + 0.01) * 50) / 50;
+  smallMultiples(document.getElementById('pcaumap'), embs.map(r => ({ title: r.embedding, r })), (g, p, w, h) => {
+    const left = 38, x = linear(10, 50, left + 12, w - 12), y = linear(y0, y1, h - 22, 0);
+    for (const v of ticks(y0, y1, (y1 - y0) > 0.15 ? 0.05 : 0.02)) {
+      s('line', { x1: left, x2: w, y1: y(v), y2: y(v), stroke: css('--grid') }, g);
+      text(g, left - 6, y(v) + 4, v.toFixed(2), { 'text-anchor': 'end', 'font-size': 10.5, class: 'num' });
+    }
+    [10, 30, 50].forEach(k => text(g, x(k), h - 4, `k=${k}`, { 'text-anchor': 'middle', 'font-size': 10.5, class: 'num' }));
+    s('line', { x1: left, x2: w, y1: y(p.r.raw), y2: y(p.r.raw), stroke: css('--baseline'), 'stroke-width': 2 }, g);
+    text(g, w, y(p.r.raw) - 5, `raw ${p.r.raw.toFixed(3)}`, { 'text-anchor': 'end', 'font-size': 10.5, class: 'num' });
+    [['pca', css('--s1'), 'PCA'], ['umap', css('--s2'), 'UMAP']].forEach(([m, color, name]) => {
+      const pts = [10, 30, 50].map(k => [x(k), y(p.r[m + k]), p.r[m + k], k]);
+      s('polyline', { points: pts.map(q => q.slice(0, 2).join(',')).join(' '), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round' }, g);
+      pts.forEach(([cx, cy, v, k]) => {
+        const c = s('circle', { cx, cy, r: 4.5, fill: color, stroke: css('--surface'), 'stroke-width': 2 }, g);
+        bindTip(c, `<b>${p.title} · ${name} k=${k}</b><br>ROC-AUC médio <span class="num">${f3(v)}</span><br>sem redução: <span class="num">${f3(p.r.raw)}</span>`);
+      });
+    });
+  });
+}
+
+function renderModels() {
+  const rows = DATA.models.filter(r => r.grupo === state.st);
+  const embs = ['mae_cls', 'mae_mean', 'vae_flat'];
+  const vals = rows.flatMap(r => [r.roc_auc_medio - r.erro_padrao, r.roc_auc_medio + r.erro_padrao]);
+  const x0 = Math.floor(Math.min(...vals) * 20) / 20, x1 = Math.ceil(Math.max(...vals) * 20) / 20;
+  const models = ['CatBoost', 'XGBoost', 'LightGBM', 'MLP'];
+  smallMultiples(document.getElementById('models'), embs.map(e => {
+    const rs = rows.filter(r => r.embedding === e);
+    const p = rs[0].friedman_p;
+    return { title: `${e} · Friedman ${p < 0.001 ? 'p < 0.001' : 'p = ' + p.toFixed(3)}`, rs };
+  }), (g, p, w, h) => {
+    const left = 70, x = linear(x0, x1, left, w - 8), rowH = (h - 24) / models.length;
+    for (const v of ticks(x0, x1, 0.05)) {
+      s('line', { x1: x(v), x2: x(v), y1: 0, y2: h - 24, stroke: css('--grid') }, g);
+      text(g, x(v), h - 8, v.toFixed(2), { 'text-anchor': 'middle', 'font-size': 10.5, class: 'num' });
+    }
+    models.forEach((m, i) => {
+      const r = p.rs.find(q => q.modelo === m), cy = i * rowH + rowH / 2;
+      text(g, left - 8, cy + 4, m, { 'text-anchor': 'end', 'font-size': 12 });
+      s('line', { x1: x(r.roc_auc_medio - r.erro_padrao), x2: x(r.roc_auc_medio + r.erro_padrao), y1: cy, y2: cy, stroke: css('--s1'), 'stroke-width': 1.5 }, g);
+      const c = s('circle', { cx: x(r.roc_auc_medio), cy, r: 5, fill: css('--s1'), stroke: css('--surface'), 'stroke-width': 2 }, g);
+      bindTip(c, `<b>${m} · ${r.embedding}</b><br>ROC-AUC médio <span class="num">${f3(r.roc_auc_medio)} ± ${f3(r.erro_padrao)}</span><br>${r.n_alvos} alvos`);
+    });
+  }, { height: 170 });
+}
+
+function renderMaeVae() {
+  seg('mv-group', groupOptions, () => state.mv, v => state.mv = v);
+  const rows = DATA.mae_vae.filter(r => r.grupo === state.mv).sort((a, b) => b.mae - a.mae).map(r => ({
+    label: short(r.target), full: r.target,
+    markers: [{ v: r.vae, color: css('--s2'), name: 'SD-VAE' }, { v: r.mae, color: css('--s1'), name: 'USF-MAE' }],
+    right: signed(r.mae - r.vae), tipExtra: `diferença MAE − VAE: <span class="num">${signed(r.mae - r.vae)}</span>`,
+  }));
+  dotRows(document.getElementById('maevae-chart'), rows, { domain: [0.4, 1.0], axisLabel: 'ROC-AUC', rightW: 64 });
+}
+
+function renderPerVariable() {
+  const P = state.pv;
+  if (P.strategy === 'best') P.cv = 'stratified';
+  seg('pv-strategy', [['global', 'Melhor global'], ['best', 'Melhor por variável']], () => P.strategy, v => P.strategy = v);
+  seg('pv-cv', [['stratified', 'Estratificada'], ['grouped', 'Agrupada por Pixel_size', P.strategy === 'best']], () => P.cv, v => P.cv = v);
+  seg('pv-metric', [['roc', 'ROC-AUC'], ['pr', 'PR-AUC']], () => P.metric, v => P.metric = v);
+  seg('pv-group', groupOptions, () => P.group, v => P.group = v);
+  seg('pv-sort', [['gain', 'Ganho'], ['name', 'Nome']], () => P.sort, v => P.sort = v);
+
+  const g = P.cv === 'grouped', embColor = css(g ? '--s2' : '--s1'), roc = P.metric === 'roc';
+  const src = (P.strategy === 'global' ? DATA.global : DATA.best).filter(r => r.grupo === P.group);
+  const rows = src.map(r => {
+    const pre = g ? 'agrup_' : '';
+    const emb = roc ? r[pre + 'roc_auc'] : r[pre + 'pr_auc'];
+    const err = roc ? r[pre + 'roc_auc_dp'] : null;
+    const acq = roc ? r[pre + 'aquisicao_roc_auc'] : r[pre + 'aquisicao_pr_auc'];
+    const dummy = roc ? null : r[pre + 'dummy_pr_auc'];
+    const gain = r[pre + 'ganho'], sig = r[pre + 'ganho_supera_margem'];
+    const combo = P.strategy === 'best' ? `${r.embedding} · ${r.reducao} · ${r.modelo}` : 'mae_cls · raw · CatBoost';
+    const markers = [];
+    if (!roc) markers.push({ v: dummy, color: css('--dummy'), name: 'Dummy (prevalência)', shape: 'tick' });
+    markers.push({ v: acq, color: css('--baseline'), name: 'Aquisição' }, { v: emb, err, color: embColor, name: 'Embedding' });
+    const extra = [`combinação: ${combo}`, `ganho ROC-AUC sobre a aquisição: <span class="num">${signed(gain)}</span> (margem ± ${f3(r[pre + 'roc_auc_dp'])})`];
+    const testable = P.strategy === 'global', sigFlag = testable && r[pre + 'significativo'] && gain > 0;
+    if (testable) extra.push(`teste pareado corrigido: p = <span class="num">${r[pre + 'p'] < 0.001 ? '< 0.001' : f3(r[pre + 'p'])}</span>, q = <span class="num">${f3(r[pre + 'q'])}</span>${sigFlag ? ' (significativo)' : ''}`);
+    if (g && r.agrup_folds_validos < 5) extra.push(`${r.agrup_folds_validos} de 5 folds válidos`);
+    if (!roc && emb === null) extra.push('PR-AUC indisponível (classe positiva invertida no sweep)');
+    return {
+      label: short(r.target) + (sigFlag ? ' *' : ''), full: r.target, markers, bold: roc && sig && gain > 0, gain, sig, sigFlag,
+      right: P.strategy === 'best' ? `${combo}  ${signed(gain)}` : `${signed(gain)}${sig ? ' ✓' : ''}`,
+      rightShort: `${signed(gain)}`, tipExtra: extra.join('<br>'),
+    };
+  });
+  rows.sort(P.sort === 'gain' ? (a, b) => b.gain - a.gain : (a, b) => a.label.localeCompare(b.label));
+
+  const n = rows.length, nSig = rows.filter(r => r.sig && r.gain > 0).length, nNeg = rows.filter(r => r.sig && r.gain < 0).length;
+  const nTest = rows.filter(r => r.sigFlag).length;
+  document.getElementById('pv-stat').innerHTML = `<b>${nSig}</b> de ${n} variáveis com ganho de ROC-AUC acima da margem` +
+    (nNeg ? `; em <b>${nNeg}</b> a aquisição sozinha é melhor além da margem` : '') +
+    (P.strategy === 'global' ? `. No teste de hipótese (q &lt; 0.05), <b>${nTest}</b> ${nTest === 1 ? 'é significativa' : 'são significativas'}, marcadas com *.` : '. O teste de hipótese só vale para a estratégia global.');
+  document.getElementById('pv-legend').innerHTML = (roc ? '' : '<span><i class="key tick" style="background:var(--dummy)"></i>Dummy (prevalência)</span>') +
+    '<span><i class="key" style="background:var(--baseline)"></i>Baseline de aquisição (largura, altura, Pixel_size)</span>' +
+    `<span><i class="key" style="background:${embColor}"></i>Embedding${roc ? ' ± dp entre folds' : ''}</span>`;
+  document.getElementById('pv-note').textContent = (roc ? 'Negrito e ✓: ganho sobre a aquisição maior que o desvio da embedding entre folds. ' : 'PR-AUC: o Dummy marca a prevalência da classe positiva; nos multiclasse, a média macro um-contra-o-resto. ') +
+    (P.strategy === 'best' ? 'Melhor por variável: máximo de 88 combinações, só na CV estratificada.' : 'Coluna da direita: ganho de ROC-AUC sobre a aquisição.');
+  dotRows(document.getElementById('pv-chart'), rows, {
+    domain: roc ? [0.2, 1.0] : [0, 1.0], ref: roc ? 0.5 : null, axisLabel: roc ? 'ROC-AUC' : 'PR-AUC',
+    rightW: P.strategy === 'best' ? 230 : 72,
+  });
+}
+
+function renderFrequency() {
+  const vs = DATA.vs_global, nonSentinel = vs.filter(r => r.grupo !== 'sentinel');
+  const median = [...vs.map(r => r.n_quase_melhores)].sort((a, b) => a - b);
+  const med = (median[Math.floor((median.length - 1) / 2)] + median[Math.ceil((median.length - 1) / 2)]) / 2;
+  document.getElementById('fq-intro').textContent =
+    `Barra = vezes em que o nível é o vencedor nas ${nonSentinel.length} variáveis não-sentinela. Enriquecimento = participação do nível ` +
+    `entre as combinações empatadas com a melhor (dentro de 1 dp entre folds; mediana de ${med} das 88 por variável) ÷ participação na grade. ` +
+    'Acima de 1, o nível aparece entre as melhores mais do que o acaso daria.';
+  const factors = [['embedding', 'Embedding'], ['método de redução', 'Redução'], ['modelo', 'Modelo']];
+  const max = Math.max(...DATA.freq.map(r => r.vitorias));
+  document.getElementById('freq').innerHTML = factors.map(([key, title]) => {
+    const rows = DATA.freq.filter(r => r.fator === key).sort((a, b) => b.vitorias - a.vitorias);
+    return `<div><h4>${title}</h4>` + rows.map(r =>
+      `<div class="fq-row" title="${r.vitorias} vitórias (${r.vitorias_imagem} entre as de imagem); ${(r.participacao_entre_quase_melhores * 100).toFixed(0)}% das quase-melhores vs. ${(r.participacao_na_grade * 100).toFixed(0)}% da grade">` +
+      `<span class="lvl">${r.nivel}</span><span class="fq-track"><span class="fq-bar" style="width:${(r.vitorias / max * 100).toFixed(1)}%"></span></span>` +
+      `<span class="enr${r.enriquecimento > 1.05 ? ' up' : ''}">${r.vitorias} · ×${r.enriquecimento.toFixed(2)}</span></div>`).join('') + '</div>';
+  }).join('');
+  const beat = vs.filter(r => r.vantagem_supera_dp);
+  document.getElementById('fq-global').innerHTML =
+    `A estratégia global (mae_cls · raw · CatBoost) está entre as empatadas com a melhor em <b>${vs.filter(r => r.global_entre_quase_melhores).length} de ${vs.length}</b> variáveis. ` +
+    `O vencedor individual a supera além do desvio em só <b>${beat.length}</b>: ${beat.map(r => `${short(r.target)} (${signed(r.vantagem_sobre_global)})`).join(', ')}.`;
+}
+
+function renderConfound() {
+  const el = document.getElementById('conf'); el.innerHTML = '';
+  const groups = ['image', 'pathology', 'history'], schemes = ['stratified', 'group_size', 'group_pixel_size'];
+  const schemePt = { stratified: 'estratificada', group_size: 'agrup. tamanho', group_pixel_size: 'agrup. Pixel_size' };
+  const sets = [['metadata_roc_auc_mean', '--baseline', 'Só aquisição'], ['embedding_roc_auc_mean', '--s1', 'Só embedding'], ['embedding+metadata_roc_auc_mean', '--s3', 'Embedding + aquisição']];
+  smallMultiples(el, groups.map(gr => ({ title: `${GROUP_PT[gr]} (${DATA.confound.find(r => r.target_group === gr).n_targets} alvos)`, gr })), (g, p, w, h) => {
+    const left = 34, y = linear(0.5, 0.88, h - 34, 0), band = (w - left) / schemes.length;
+    for (const v of ticks(0.5, 0.88, 0.05)) {
+      s('line', { x1: left, x2: w, y1: y(v), y2: y(v), stroke: css('--grid') }, g);
+      text(g, left - 6, y(v) + 4, v.toFixed(2), { 'text-anchor': 'end', 'font-size': 10.5, class: 'num' });
+    }
+    schemes.forEach((sc, i) => {
+      const r = DATA.confound.find(q => q.target_group === p.gr && q.scheme === sc);
+      const bw = Math.min(22, (band - 18) / 3), cx = left + band * i + band / 2;
+      sets.forEach(([key, color, name], k) => {
+        const v = r[key], bx = cx + (k - 1) * (bw + 2) - bw / 2, top = y(v), base = y(0.5);
+        const path = `M${bx},${base} V${top + 4} Q${bx},${top} ${bx + 4},${top} H${bx + bw - 4} Q${bx + bw},${top} ${bx + bw},${top + 4} V${base} Z`;
+        const bar = s('path', { d: path, fill: css(color) }, g);
+        bindTip(bar, `<b>${GROUP_PT[p.gr]} · ${schemePt[sc]}</b><br>${name}: <span class="num">${f3(v)}</span><br>ganho emb+aq − aq: <span class="num">${signed(r.gain_vs_metadata_roc_auc)}</span>`);
+      });
+      text(g, cx, h - 16, schemePt[sc], { 'text-anchor': 'middle', 'font-size': 11 });
+    });
+    s('line', { x1: left, x2: w, y1: y(0.5), y2: y(0.5), stroke: css('--axis') }, g);
+  }, { height: 230 });
+}
+
+function renderHistory() {
+  const rows = DATA.history.map(r => ({
+    label: short(r.target), full: r.target, markers: [
+      { v: r.anotacoes_roc_auc, err: r.anotacoes_dp, color: css('--s3'), name: 'Só anotações' },
+      { v: r.embedding_estrat, err: r.embedding_estrat_dp, color: css('--s1'), name: 'Embedding, estratificada' },
+      { v: r.embedding_agrup, err: r.embedding_agrup_dp, color: css('--s2'), name: 'Embedding, agrupada' },
+    ],
+  }));
+  dotRows(document.getElementById('hist'), rows, { domain: [0.45, 1.0], step: 0.1, axisLabel: 'ROC-AUC ± dp entre folds', dodge: true });
+}
+
+function renderAll() {
+  hideTip();
+  renderTargets(); renderHeat(); renderPcaUmap(); renderModels(); renderMaeVae(); renderPerVariable(); renderConfound(); renderHistory();
+}
+
+renderFacts(); renderDict(); renderFrequency(); renderAll();
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAll, 150); });
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderAll);
+new MutationObserver(renderAll).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>

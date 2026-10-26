@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import argparse
 from pathlib import Path
 from io import BytesIO
 
@@ -10,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 from serve.inference import load_model, base64_to_embedding, decode_embedding
 
 
-DATA_DIR = Path('dataset_breast/BrEaST-Lesions_USG-images_and_masks')
+DATA_DIR = Path('dataset_breast/BrEaST-Lesions_USG-images_and_masks-Dec-15-2023/BrEaST-Lesions_USG-images_and_masks')
 # embeddings_per_patch.json is produced inside the images folder by generate_embeddings.py
 EMB_ORIG = DATA_DIR / 'embeddings_per_patch.json'
 EMB_INF = Path('dataset_breast/infered_embeddings.json')
@@ -50,14 +51,14 @@ def decode_emb_record(rec, model):
     return img
 
 
-def make_captioned_strip(images, captions, label_height=20, padding=8):
+def make_captioned_strip(images, captions, label_height=20, padding=8, font_size=None):
     # images: list of PIL Images, captions: list of str
     widths, heights = zip(*(im.size for im in images))
     total_w = sum(widths) + padding * (len(images) - 1)
     max_h = max(heights)
     # font
     try:
-        font = ImageFont.load_default()
+        font = ImageFont.load_default(size=font_size) if font_size else ImageFont.load_default()
     except Exception:
         font = None
 
@@ -87,7 +88,20 @@ def make_captioned_strip(images, captions, label_height=20, padding=8):
     return out
 
 
+def parse_args():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--limit', type=int, default=None, help='Only process the first N images (sorted by filename)')
+    p.add_argument('--cases', nargs='+', default=None,
+                    help='Only process these specific filenames (e.g. case007.png case080.png). '
+                         'Takes precedence over --limit. Useful for restricting the comparison to '
+                         'held-out TEST-split images: train_catboost.py writes predictions for all '
+                         '256 patients, including the 204 it trained on, so reconstructing an '
+                         'arbitrary case can flatter the result.')
+    return p.parse_args()
+
+
 def main():
+    args = parse_args()
     ensure_dirs()
     model = load_model(os.environ.get('MAE_CHECKPOINT', './USF-MAE_full_pretrain_43dataset_100epochs.pt'), device='cpu')
 
@@ -95,6 +109,13 @@ def main():
     inf_json = load_json(EMB_INF)
 
     keys = sorted(inf_json.keys())
+    if args.cases:
+        missing = [c for c in args.cases if c not in inf_json]
+        if missing:
+            print('No inferred embedding for:', ', '.join(missing))
+        keys = [c for c in args.cases if c in inf_json]
+    elif args.limit:
+        keys = keys[:args.limit]
     print('Found', len(keys), 'inferred embeddings')
 
     for k in keys:
